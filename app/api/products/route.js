@@ -1,20 +1,16 @@
-import { prisma } from "@/lib/prisma";
-import { generateDescription } from "@/lib/gemini";
+// app/api/products/route.ts or route.js
+import { prisma } from '@/lib/prisma';
+import { NextResponse } from 'next/server';
 
-export async function POST(req) {
-  const body = await req.json();
-  const { name, price, imageUrl, prompt } = body;
+export async function GET() {
+  try {
+    const products = await prisma.product.findMany({
+      orderBy: { createdAt: 'desc' },
+    });
 
-  const description = await generateDescription(prompt);
-
-  const product = await prisma.product.create({
-    data: {
-      name,
-      price: parseFloat(price),
-      imageUrl,
-      description,
-    },
-  });
-
-  return new Response(JSON.stringify(product), { status: 201 });
+    return NextResponse.json(products); // ✅ Return valid JSON array
+  } catch (error) {
+    console.error('Error fetching products:', error);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 }); // ✅ Still valid JSON
+  }
 }
