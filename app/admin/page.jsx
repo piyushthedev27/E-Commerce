@@ -1,166 +1,201 @@
-  'use client'
+'use client'
 
-  import { useEffect, useState } from 'react'
-  import { useRouter } from 'next/navigation'
-  import Navbar from '@/components/Navbar'
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import Navbar from '@/components/Navbar'
 
-  export default function AdminPage() {
-    const [products, setProducts] = useState([])
-    const [editingId, setEditingId] = useState(null)
-    const [form, setForm] = useState({ name: '', price: '', imageUrl: '', prompt: '' })
-    const [loading, setLoading] = useState(false)
-    const router = useRouter()
+export default function AdminPage() {
+  const [products, setProducts] = useState([])
+  const [editingId, setEditingId] = useState(null)
+  const [form, setForm] = useState({ name: '', price: '', imageUrl: '' })
+  const [loading, setLoading] = useState(false)
+  const router = useRouter()
 
+  // Fetch products on load
   useEffect(() => {
-  fetch('/api/products')
-    .then(async (res) => {
-      if (!res.ok) {
-        console.error('Failed to fetch products:', res.status);
-        return;
+    async function fetchProducts() {
+      try {
+        const res = await fetch('/api/products')
+        if (res.ok) {
+          const data = await res.json()
+          setProducts(data)
+        } else {
+          console.error('Failed to fetch products!', res.status)
+        }
+      } catch (err) {
+        console.error('Error fetching!', err)
       }
-
-      const data = await res.json();
-      setProducts(data);
-    })
-    .catch((err) => {
-      console.error('Error in fetch:', err.message);
-    });
-}, []);
-
-
-    const startEdit = (product) => {
-      setEditingId(product.id)
-      setForm({
-        name: product.name,
-        price: product.price,
-        imageUrl: product.imageUrl,
-        prompt: '',
-      })
     }
 
-    const cancelEdit = () => {
-      setEditingId(null)
-      setForm({ name: '', price: '', imageUrl: '', prompt: '' })
-    }
+    fetchProducts()
+  }, [])
 
-    const handleUpdate = async (id) => {
-      setLoading(true)
+
+  const startEdit = (product) => {
+    setEditingId(product.id)
+    setForm({ name: product.name, price: product.price, imageUrl: product.imageUrl })
+  }
+
+  const cancelEdit = () => {
+    setEditingId(null)
+    setForm({ name: '', price: '', imageUrl: '' })
+  }
+
+  const handleUpdate = async (id) => {
+    setLoading(true)
+    try {
       const res = await fetch(`/api/products/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
       })
-
       if (res.ok) {
         const updated = await res.json()
-        setProducts(products.map(p => (p.id === id ? updated : p)))
+        setProducts((prev) =>
+          prev.map((p) => (p.id === id ? updated : p))
+        )
         cancelEdit()
       } else {
-        alert('Update failed')
+        console.error('Failed to update!', res.status)
+        alert('Failed to update product.')
       }
-
+    } catch (err) {
+      console.error('Error!', err)
+      alert('Error updating product.')
+    } finally {
       setLoading(false)
     }
+  }
 
-    const handleDelete = async (id) => {
-      if (!confirm('Are you sure you want to delete this product?')) return
+  const handleDelete = async (id) => {
+    if (!confirm('Are you sure you want to delete this product?')) return
+    try {
       const res = await fetch(`/api/products/${id}`, { method: 'DELETE' })
       if (res.ok) {
-        setProducts(products.filter(p => p.id !== id))
+        setProducts((prev) => prev.filter((p) => p.id !== id))
+      } else {
+        console.error('Failed!', res.status)
+        alert('Failed to delete product.')
       }
+    } catch (err) {
+      console.error('Error!', err)
+      alert('Error while removing product.')
     }
+  }
 
-    return (
-      <>
+  return (
+    <>
       <Navbar />
-      <div className="min-h-screen bg-gray-100 py-6 px-2">
-        <div className="max-w-5xl mx-auto">
-          <h1 className="text-xl font-semibold text-blue-600 mb-4">Admin Dashboard</h1>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            {products.map(product => (
-              <div
-                key={product.id}
-                className="bg-white border rounded-lg p-3 text-lg shadow-sm "
-              >
-                {editingId === product.id ? (
-                  <>
+      <div className="min-h-screen bg-gray-50 py-10 px-4">
+        <h1 className="text-2xl font-semibold text-blue-600 mb-6">
+          Admin Dashboard
+        </h1>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+          {products.map((product) => (
+            <div
+              key={product.id}
+              className="bg-gray-100 p-4 rounded-md shadow-md hover:shadow-lg transition-shadow duration-500 ease-in-out border border-gray-300"
+            >
+              {editingId === product.id ? (
+                <div className="flex flex-col gap-2">
                     <input
-                      name="name"
-                      value={form.name}
-                      onChange={e => setForm({ ...form, name: e.target.value })}
-                      placeholder="Name"
-                      className="w-full mb-1 p-1 border rounded text-xs"
+                    aria-label='Product Name'
+                    className="p-2 border rounded-md text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    value={form.name}
+                    onChange={(e) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        name: e.target.value,
+                      }))
+                    }
+                    placeholder="Product Name"
                     />
+
                     <input
-                      name="price"
-                      type="number"
-                      value={form.price}
-                      onChange={e => setForm({ ...form, price: e.target.value })}
-                      placeholder="Price"
-                      className="w-full mb-1 p-1 border rounded text-xs"
+                    aria-label='Product Price'
+                    className="p-2 border rounded-md text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    type="number"
+                    value={form.price}
+                    onChange={(e) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        price: e.target.value,
+                      }))
+                    }
+                    placeholder="Product Price"
                     />
+
                     <input
-                      name="imageUrl"
-                      value={form.imageUrl}
-                      onChange={e => setForm({ ...form, imageUrl: e.target.value })}
-                      placeholder="Image URL"
-                      className="w-full mb-1 p-1 border rounded text-xs"
+                    aria-label='Product Image URL'
+                    className="p-2 border rounded-md text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    value={form.imageUrl}
+                    onChange={(e) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        imageUrl: e.target.value,
+                      }))
+                    }
+                    placeholder="Product Image URL"
                     />
-                    <input
-                      name="prompt"
-                      value={form.prompt}
-                      onChange={e => setForm({ ...form, prompt: e.target.value })}
-                      placeholder="Optional prompt"
-                      className="w-full mb-2 p-1 border rounded text-xs"
-                    />
-                    <div className="flex gap-1 justify-end">
+
+                    <div className="flex gap-2">
                       <button
-                        onClick={() => handleUpdate(product.id)}
-                        className="bg-blue-600 text-white text-xs px-2 py-1 rounded hover:bg-blue-700"
                         disabled={loading}
+                        onClick={() => handleUpdate(product.id)}
+                        className="bg-blue-500 disabled:bg-blue-300 text-gray-50 px-4 py-2 rounded-md font-semibold hover:bg-blue-600 transition-colors duration-500 ease-in-out"
                       >
                         {loading ? 'Saving...' : 'Save'}
                       </button>
                       <button
+                        disabled={loading}
                         onClick={cancelEdit}
-                        className="bg-gray-300 text-xs px-2 py-1 rounded hover:bg-gray-400"
+                        className="bg-gray-500 disabled:bg-gray-400 text-gray-50 px-4 py-2 rounded-md font-semibold hover:bg-gray-600 transition-colors duration-500 ease-in-out"
                       >
                         Cancel
                       </button>
                     </div>
-                  </>
-                ) : (
-                  <>
-                    <img
-                      src={product.imageUrl}
-                      alt={product.name}
-                      className="w-full h-32 object-cover rounded mb-2"
-                    />
-                   <h3 className="font-sans text-lg text-gray-800">{product.name}</h3>
-                    <p className="text-gray-800 line-clamp-2 ">{product.description}</p>
-                    <p className="text-blue-600 font-semibold mt-1">₹{product.price}</p>
-                    <div className="flex gap-1 mt-2 justify-end">
+                </div>
+              ) : (
+                <div className="flex flex-col gap-2">
+                    <img src={product.imageUrl} alt={product.name} className="rounded-md w-full h-40 object-cover" />
+
+                    <h3 className="text-gray-900 font-semibold">
+                      {product.name}
+                    </h3>
+
+                    <p className="text-gray-700">
+                      {product.description}
+                    </p>
+
+                    <p className="text-blue-600 font-semibold">
+                      ₹{product.price}
+                    </p>
+
+                    <div className="flex gap-2 mt-4">
                       <button
                         onClick={() => startEdit(product)}
-                        className="bg-yellow-500 text-white text-xs px-2 py-1 rounded hover:bg-yellow-600"
+                        className="bg-yellow-500 text-gray-50 px-4 py-2 rounded-md font-semibold hover:bg-yellow-600 transition-colors duration-500 ease-in-out"
                       >
                         Edit
                       </button>
+
                       <button
                         onClick={() => handleDelete(product.id)}
-                        className="bg-red-500 text-white text-xs px-2 py-1 rounded hover:bg-red-600"
+                        className="bg-red-500 text-gray-50 px-4 py-2 rounded-md font-semibold hover:bg-red-600 transition-colors duration-500 ease-in-out"
                       >
                         Delete
                       </button>
                     </div>
-                  </>
-                )}
-              </div>
-            ))}
-          </div>
+                </div>
+              )}
+
+            </div>
+          ))}
         </div>
       </div>
-      </>
-    )
-  }
+    </>
+  )
+}
+

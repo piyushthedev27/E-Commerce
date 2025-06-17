@@ -1,16 +1,15 @@
-// app/api/products/route.ts or route.js
-import { prisma } from '@/lib/prisma';
+// src/app/api/products/route.js
+
+import db from '@/lib/db';
 import { NextResponse } from 'next/server';
 
-export async function GET() {
+export async function GET(req) {
   try {
-    const products = await prisma.product.findMany({
-      orderBy: { createdAt: 'desc' },
-    });
-
-    return NextResponse.json(products); // ✅ Return valid JSON array
+    // Change this to match your db schema
+    const products = await db.product.findMany({});
+    return NextResponse.json(products);
   } catch (error) {
-    console.error('Error fetching products:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 }); // ✅ Still valid JSON
+    console.error(error);
+    return NextResponse.json({error:'Failed to fetch products'}, {status: 500});
   }
 }
